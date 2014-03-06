@@ -14,11 +14,11 @@ Requires:
 
 Installation/Compilation:
 
-# go get
-# go build
+  go get
+  go build
 
 Running:
 
-# ./brute38
+  ./brute38
 
 The above assumes you have Go set up properly and you copied the code into your GOPATH/src somewhere.
