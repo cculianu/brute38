@@ -12,7 +12,7 @@ See Charlie Hothersall-Thomas' original implementation at: https://github.com/ch
 
 Requires:
 
-- Go to be installed
+- Go Language 
 
 Installation/Compilation:
 
