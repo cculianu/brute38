@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/cculianu/brute38/bip38"
 	"fmt"
+	"github.com/cculianu/brute38/bip38"
 	"github.com/docopt/docopt.go"
 	"log"
 	"runtime"
@@ -21,8 +21,8 @@ Default key:
   If no privkey is specified, 6PfQoEzqbz3i2LpHibYnwAspwBwa3Nei1rU7UH9yzfutXT7tyUzV8aYAvG is used, with pwlen 4
 
 Specifying a key to crack:
-  <privatekey>  Bruteforce crack the given BIP38 key.
-  <pwlen>       Length, in characters, of the original passphrase.
+  <privatekey>   Bruteforce crack the given BIP38 key.
+  <pwlen>        Length, in characters, of the original passphrase.
 
 Options:
   --chunk=N/T    For running on multiple machines to search the same space, break space up into T pieces and process piece N
