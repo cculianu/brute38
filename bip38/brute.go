@@ -23,12 +23,10 @@ func searchRange(start uint64, finish uint64, encryptedKey string, charset strin
 			c <- privKey + " (" + guess + ")"
 			return
 		}
+		
 		atomic.AddUint64(&totalTried, 1)
 
-		//if totalTried == 1 || totalTried%uint64(10) == 0 {
 		fmt.Printf("%6d passphrases tried (latest guess: %s )     \r", totalTried, guess)
-		//}
-
 	}
 
 	c <- ""
