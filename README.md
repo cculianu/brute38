@@ -15,6 +15,7 @@ Requires:
 Installation/Compilation:
 
 > go get
+
 > go build
 
 Running:
