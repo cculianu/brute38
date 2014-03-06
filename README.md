@@ -1,6 +1,8 @@
 brute38
 =======
 
+(C) 2014 Calin Culianu <calin.culianu@gmail.com> 1Ca1inQuedcKdyELCTmN8AtKTTehebY4mC
+
 BIP38 brute force password cracker, written in Go
 
 Based on Charlie Hothersall-Thomas' implementation, but rewritten front-end and expanded 
