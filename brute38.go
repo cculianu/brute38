@@ -7,15 +7,16 @@ import (
 	"log"
 	"runtime"
 	"strconv"
+	"strings"
 )
 
 var APP_NAME string = "BIP38 Bruteforce Cracker"
-var APP_USAGE string = `BIP38 Bruteforce Cracker
+var APP_USAGE string = `BIP38 Bruteforce Cracker v.1.1
 Copyright (c) 2014, Calin Culianu <calin.culianu@gmail.com> 1Ca1inQuedcKdyELCTmN8AtKTTehebY4mC
 
 Usage:
-  brute38 [--chunk=N/T] [--charset=S] [-t N]
-  brute38 [--chunk=N/T] [--charset=S] [-t N] <pwlen> <privatekey>
+  brute38 [--chunk=N/T] [--charset=S] [-t N] [--resume=NUM]
+  brute38 [--chunk=N/T] [--charset=S] [-t N] [--resume=NUM] <pwlen> <privatekey>
    
 Default key:
   If no privkey is specified, 6PfQoEzqbz3i2LpHibYnwAspwBwa3Nei1rU7UH9yzfutXT7tyUzV8aYAvG is used, with pwlen 4
@@ -28,6 +29,7 @@ Options:
   --chunk=N/T    For running on multiple machines to search the same space, break space up into T pieces and process piece N
   --charset=S    The set of characters to use. Defaults to !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_abcdefghijklmnopqrstuvwxyz{|}~. 
   -t N           Set maximum threads to N
+  --resume=NUM   For continuing from a previously-aborted run. Specify the resume offset to continue from, as printed onscreen after a ^C
   -h             Usage Help
 `
 
@@ -75,12 +77,19 @@ func main() {
 	if arguments["-t"] != nil {
 		ncpu, _ = strconv.Atoi(arguments["-t"].(string))
 	}
+	var resume uint64 = 0
+	if arguments["--resume"] != nil {
+		resume, _ = strconv.ParseUint(arguments["--resume"].(string), 10, 64)
+	}
 	fmt.Printf("Running brute force for BIP0038-encrypted string on %d CPUs\n", ncpu)
 	runtime.GOMAXPROCS(ncpu)
-	result := bip38.BruteChunk(ncpu, priv, charset, pwlen, chunk, chunks)
+	result := bip38.BruteChunk(ncpu, priv, charset, pwlen, chunk, chunks, resume)
 	if result == "" {
 		fmt.Printf("\nNot found.\n")
 		return
+	} else if strings.HasPrefix(result, "to resume") {
+		fmt.Printf("Exiting... %s                                               \n", result)
+	} else {
+		fmt.Printf("\n!!! FOUND !!!!\n%s\n", result)
 	}
-	fmt.Printf("\n!!! FOUND !!!!\n%s\n", result)
 }
