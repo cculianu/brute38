@@ -2,11 +2,11 @@ package bip38
 
 import (
 	"bytes"
-	"code.google.com/p/go.crypto/scrypt"
+	"golang.org/x/crypto/scrypt"
 	"crypto/aes"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/piotrnar/gocoin/btc"
+	"github.com/cculianu/gocoin/btc"
 	"log"
 	"math/big"
 )
