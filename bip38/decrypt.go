@@ -8,9 +8,75 @@ import (
 	"github.com/cculianu/gocoin/btc"
 	"log"
 	"math/big"
-//	"encoding/hex"
 )
 
+
+const ( /* used for Key.type */
+	_ = iota
+	NonECMultKey = iota
+	ECMultKey = iota
+)
+
+type Key struct { 
+	enc string // bip38 base58 encoded key (as the user would see it in a paper wallet)
+	dec []byte // key decoded to bytes
+	flag byte // the flag byte
+	compressed bool // boolean flag determining if compressed
+	typ int // one of NonECMultKey or ECMultKey above
+	salt [] byte // the slice salt -- a slice of .dec slice
+	entropy [] byte // only non-nil for typ==ECMultKey -- a slice into .dec
+	hasLotSequence bool // always false, may be true only for typ==ECMultKey
+}
+
+var bigN *big.Int
+
+func init() {
+	var success bool
+	bigN, success = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
+	if !success {
+		log.Fatal("Failed to create Int for N")
+	}
+}
+
+func NewKey(encKey string) (o *Key) {
+	o = new(Key)
+	o.enc = encKey;
+	o.dec = btc.Decodeb58(o.enc)[:39] // trim to length 39 (not sure why needed)
+	if o.dec == nil {
+		log.Fatal("Cannot decode base58 string " + encKey)
+	}
+	if len(o.dec) != 39 {
+		log.Fatal("Provided encrypted key data is of the wrong length")
+	}
+	if o.dec[0] == 0x01 && o.dec[1] == 0x42 {
+		o.typ = NonECMultKey
+	} else if o.dec[0] == 0x01 && o.dec[1] == 0x43 {
+		o.typ = ECMultKey
+	} else {
+		log.Fatal("Malformed byte slice -- the specified key appears to be invalid")		
+	}
+	// debug print
+	//log.Printf("Keytype=%d\n",o.typ)
+
+	o.flag = o.dec[2]
+	o.compressed = (o.flag&0x20) == 0x20
+	if o.typ == NonECMultKey {
+		o.salt = o.dec[3:7]
+		if !o.compressed && o.flag != 0xc0 {
+			log.Fatal("Invalid BIP38 compression flag")
+		}
+	} else if o.typ == ECMultKey {
+		o.hasLotSequence = (o.flag&0x04) == 0x04
+		if o.hasLotSequence {
+			o.salt = o.dec[7:11]
+			o.entropy = o.dec[7:15]
+		} else {
+			o.salt = o.dec[7:15]
+			o.entropy = o.salt
+		}
+	}
+	return o
+}
 
 func sha256Twice(b []byte) []byte {
 	h := sha256.New()
@@ -31,18 +97,12 @@ func Pk2Wif(pk []byte, compressed bool) string {
 	return btc.Encodeb58(pkChk)
 }
 
-func DecryptWithPassphraseNoEC(dec []byte, passphrase string) string {
-	flagByte := dec[2]
-	compressed := (flagByte&0x20) == 0x20
-	if !compressed && flagByte != 0xc0 {
-		log.Fatal("Invalid BIP38 compression flag")
-	}
-	salt := dec[3:7]
-	scryptBuf, err := scrypt.Key([]byte(passphrase), salt, 16384, 8, 8, 64)
+func DecryptWithPassphraseNoEC(key *Key, passphrase string) string {
+	scryptBuf, err := scrypt.Key([]byte(passphrase), key.salt, 16384, 8, 8, 64)
 	derivedHalf1 := scryptBuf[0:32]
 	derivedHalf2 := scryptBuf[32:64]
-	encryptedHalf1 := dec[7:23]
-	encryptedHalf2 := dec[23:39]
+	encryptedHalf1 := key.dec[7:23]
+	encryptedHalf2 := key.dec[23:39]
 	h, err := aes.NewCipher(derivedHalf2)
 	if h == nil {
 		log.Fatal(err)
@@ -61,7 +121,7 @@ func DecryptWithPassphraseNoEC(dec []byte, passphrase string) string {
 		keyBytes[i+16] = k2[i] ^ derivedHalf1[i+16];
 	}
 	d := new (big.Int).SetBytes(keyBytes)
-	pubKey, err := btc.PublicFromPrivate(d.Bytes(), compressed)
+	pubKey, err := btc.PublicFromPrivate(d.Bytes(), key.compressed)
 	if pubKey == nil {
 		log.Fatal(err)
 	}
@@ -69,40 +129,26 @@ func DecryptWithPassphraseNoEC(dec []byte, passphrase string) string {
 	
 	addrHashed := sha256Twice([]byte(addr))[0:4]
 
-	if addrHashed[0] != salt[0] || addrHashed[1] != salt[1] || addrHashed[2] != salt[2] || addrHashed[3] != salt[3] {
+	if addrHashed[0] != key.salt[0] || addrHashed[1] != key.salt[1] || addrHashed[2] != key.salt[2] || addrHashed[3] != key.salt[3] {
 		return ""
 	}
 
-	return Pk2Wif(d.Bytes(),compressed)
+	return Pk2Wif(d.Bytes(),key.compressed)
 }
 
-func DecryptWithPassphrase(dec []byte, passphrase string) string {
-	if len(dec) != 39 {
-		log.Fatal("Provided encrypted key data is of the wrong length")
-	}
-	if dec[0] == 0x01 && dec[1] == 0x42 {
-		return DecryptWithPassphraseNoEC(dec, passphrase)
-	} else if dec[0] == 0x01 && dec[1] == 0x43 {
-		compress := dec[2]&0x20 == 0x20
-		hasLotSequence := dec[2]&0x04 == 0x04
+func DecryptWithPassphrase(key *Key, passphrase string) string {
+	if key.typ == NonECMultKey {
+		return DecryptWithPassphraseNoEC(key, passphrase)
+	} else if key.typ == ECMultKey {
 
-		var ownerSalt, ownerEntropy []byte
-		if hasLotSequence {
-			ownerSalt = dec[7:11]
-			ownerEntropy = dec[7:15]
-		} else {
-			ownerSalt = dec[7:15]
-			ownerEntropy = ownerSalt
-		}
-
-		prefactorA, err := scrypt.Key([]byte(passphrase), ownerSalt, 16384, 8, 8, 32)
+		prefactorA, err := scrypt.Key([]byte(passphrase), key.salt, 16384, 8, 8, 32)
 		if prefactorA == nil {
 			log.Fatal(err)
 		}
 
 		var passFactor []byte
-		if hasLotSequence {
-			prefactorB := bytes.Join([][]byte{prefactorA, ownerEntropy}, nil)
+		if key.hasLotSequence {
+			prefactorB := bytes.Join([][]byte{prefactorA, key.entropy}, nil)
 			passFactor = sha256Twice(prefactorB)
 		} else {
 			passFactor = prefactorA
@@ -113,10 +159,10 @@ func DecryptWithPassphrase(dec []byte, passphrase string) string {
 			log.Fatal(err)
 		}
 
-		encryptedpart1 := dec[15:23]
-		encryptedpart2 := dec[23:39]
+		encryptedpart1 := key.dec[15:23]
+		encryptedpart2 := key.dec[23:39]
 
-		derived, err := scrypt.Key(passpoint, bytes.Join([][]byte{dec[3:7], ownerEntropy}, nil), 1024, 1, 1, 64)
+		derived, err := scrypt.Key(passpoint, bytes.Join([][]byte{key.dec[3:7], key.entropy}, nil), 1024, 1, 1, 64)
 		if derived == nil {
 			log.Fatal(err)
 		}
@@ -143,11 +189,6 @@ func DecryptWithPassphrase(dec []byte, passphrase string) string {
 		seeddb := bytes.Join([][]byte{unencryptedpart1[:16], unencryptedpart2[8:]}, nil)
 		factorb := sha256Twice(seeddb)
 
-		bigN, success := new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
-		if !success {
-			log.Fatal("Failed to create Int for N")
-		}
-
 		passFactorBig := new(big.Int).SetBytes(passFactor)
 		factorbBig := new(big.Int).SetBytes(factorb)
 
@@ -155,7 +196,7 @@ func DecryptWithPassphrase(dec []byte, passphrase string) string {
 		privKey.Mul(passFactorBig, factorbBig)
 		privKey.Mod(privKey, bigN)
 
-		pubKey, err := btc.PublicFromPrivate(privKey.Bytes(), compress)
+		pubKey, err := btc.PublicFromPrivate(privKey.Bytes(), key.compressed)
 		if pubKey == nil {
 			log.Fatal(err)
 		}
@@ -164,14 +205,13 @@ func DecryptWithPassphrase(dec []byte, passphrase string) string {
 
 		addrHashed := sha256Twice([]byte(addr))
 
-		if addrHashed[0] != dec[3] || addrHashed[1] != dec[4] || addrHashed[2] != dec[5] || addrHashed[3] != dec[6] {
+		if addrHashed[0] != key.dec[3] || addrHashed[1] != key.dec[4] || addrHashed[2] != key.dec[5] || addrHashed[3] != key.dec[6] {
 			return ""
 		}
 
-		return Pk2Wif(privKey.Bytes(),compress)
-		//return hex.EncodeToString(privKey.Bytes())
+		return Pk2Wif(privKey.Bytes(),key.compressed)
 	}
 
-	log.Fatal("Malformed byte slice")
+	log.Fatal("INTERNAL ERROR: Unknown key type")
 	return ""
 }

@@ -8,19 +8,14 @@ import (
 	"os/signal"
 	"strconv"
 	"sync/atomic"
-	"github.com/cculianu/gocoin/btc"
 )
 
 var totalTried uint64 = 0
 var stopSearch int32 = 0
 
-func searchRange(start uint64, finish uint64, encryptedKey string, charset string, pwlen int, pat []rune, c chan string) {
+func searchRange(start uint64, finish uint64, key *Key, charset string, pwlen int, pat []rune, c chan string) {
 	cset := []rune(charset)
 	var i uint64
-	decKey := btc.Decodeb58(encryptedKey)[:39] // trim to length 39 (not sure why needed)
-	if decKey == nil {
-		log.Fatal("Cannot decode base58 string " + encryptedKey)
-	}
 
 	var guess []rune = make([]rune, len(pat))
 	
@@ -35,7 +30,7 @@ func searchRange(start uint64, finish uint64, encryptedKey string, charset strin
 			}
 		}
 		guessString := string(guess)
-		privKey := DecryptWithPassphrase(decKey, guessString)
+		privKey := DecryptWithPassphrase(key, guessString)
 		if privKey != "" {
 			c <- privKey + "    pass = '" + guessString + "'"
 			return
@@ -63,6 +58,8 @@ func BruteChunk(routines int, encryptedKey string, charset string, pwlen int, pa
 	if encryptedKey == "" {
 		log.Fatal("encryptedKey required")
 	}
+	
+	key := NewKey(encryptedKey)
 
 	if routines < 1 {
 		log.Fatal("routines must be >= 1")
@@ -127,7 +124,7 @@ func BruteChunk(routines int, encryptedKey string, charset string, pwlen int, pa
 			finish = uint64(i)*blockSize + blockSize + startFrom
 		}
 		start := uint64(i)*blockSize + startFrom + resume
-		go searchRange(start, finish, encryptedKey, charset, pwlen, patAsRunes, c)
+		go searchRange(start, finish, key, charset, pwlen, patAsRunes, c)
 	}
 	var minResumeKey uint64 = 0
 	i := routines - 1
