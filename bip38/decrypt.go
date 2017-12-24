@@ -81,7 +81,6 @@ func DecryptWithPassphrase(dec []byte, passphrase string) string {
 		log.Fatal("Provided encrypted key data is of the wrong length")
 	}
 	if dec[0] == 0x01 && dec[1] == 0x42 {
-		log.Fatal("ha")
 		return DecryptWithPassphraseNoEC(dec, passphrase)
 	} else if dec[0] == 0x01 && dec[1] == 0x43 {
 		compress := dec[2]&0x20 == 0x20
