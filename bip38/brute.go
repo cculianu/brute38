@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"strconv"
 	"sync/atomic"
+	"github.com/cculianu/gocoin/btc"
 )
 
 var totalTried uint64 = 0
@@ -16,6 +17,11 @@ var stopSearch int32 = 0
 func searchRange(start uint64, finish uint64, encryptedKey string, charset string, pwlen int, c chan string) {
 	cset := []rune(charset)
 	var i uint64
+	decKey := btc.Decodeb58(encryptedKey)[:39] // trim to length 39 (not sure why needed)
+	if decKey == nil {
+		log.Fatal("Cannot decode base58 string " + encryptedKey)
+	}
+
 	for i = start; atomic.LoadInt32(&stopSearch) == 0 && i < finish; i++ {
 		acum := i
 		var guess string = ""
@@ -23,7 +29,7 @@ func searchRange(start uint64, finish uint64, encryptedKey string, charset strin
 			guess = guess + string(cset[acum%uint64(len(cset))])
 			acum /= uint64(len(cset))
 		}
-		privKey := DecryptWithPassphrase(encryptedKey, guess)
+		privKey := DecryptWithPassphrase(decKey, guess)
 		if privKey != "" {
 			c <- privKey + "    pass = '" + guess + "'"
 			return
