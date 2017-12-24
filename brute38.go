@@ -28,7 +28,7 @@ Specifying a key to crack:
   <privatekey>   Bruteforce crack the given BIP38 key.
   <pwlen_or_pat> Length, in characters, of the original passphrase
                                         *OR*
-                    A pattern, where ? represents unknown characters, eg:
+                 A pattern, where ? represents unknown characters, eg:
                     foo??bar?     -- try things like foo12bar3, fooABbarZ,
                                      fooefbarg, etc
                     ??foo???bar?? -- try things like ABfooCDEbarFG,
