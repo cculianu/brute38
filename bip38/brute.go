@@ -25,7 +25,7 @@ func searchRange(start uint64, finish uint64, encryptedKey string, charset strin
 		}
 		privKey := DecryptWithPassphrase(encryptedKey, guess)
 		if privKey != "" {
-			c <- privKey + " (" + guess + ")"
+			c <- privKey + "    pass = '" + guess + "'"
 			return
 		}
 
