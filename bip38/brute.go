@@ -13,7 +13,7 @@ import (
 var totalTried uint64 = 0
 var stopSearch int32 = 0
 
-func searchRange(start uint64, finish uint64, key *Key, charset string, pwlen int, pat []rune, c chan string) {
+func searchRange(start, finish uint64, key *Key, charset string, pwlen int, pat []rune, c chan string) {
 	cset := []rune(charset)
 	var i uint64
 
@@ -47,11 +47,11 @@ func searchRange(start uint64, finish uint64, key *Key, charset string, pwlen in
 	c <- ""
 }
 
-func Brute(routines int, encryptedKey string, charset string, pwlen int, pat string, resume uint64) string {
+func Brute(routines int, encryptedKey, charset string, pwlen int, pat string, resume uint64) string {
 	return BruteChunk(routines, encryptedKey, charset, pwlen, pat, 0, 1, resume)
 }
 
-func BruteChunk(routines int, encryptedKey string, charset string, pwlen int, pat string, chunk int, chunks int, resume uint64) string {
+func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat string, chunk, chunks int, resume uint64) string {
 	if chunk < 0 || chunks <= 0 || chunk >= chunks {
 		log.Fatal("chunk/chunks specification invalid")
 	}
