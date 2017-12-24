@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"os"
 )
 
 var APP_NAME string = "BIP38 Bruteforce Cracker"
@@ -59,7 +60,7 @@ Examples:
         Resumes at 3, searches a password of length 3 with the middle
         character being unknown, from the entire ASCII set.
         
-    brute38 --chatset='mopab' 3 6PRM2NBu9Zg9Z5Loxma1RUQiktGDQrqLBg3X7171UDJt9bPTGDqSHWibTh
+    brute38 --charset='mopab' 3 6PRM2NBu9Zg9Z5Loxma1RUQiktGDQrqLBg3X7171UDJt9bPTGDqSHWibTh
         Searches a password of length 3 with all characters being unknown,
         from a very limited set.
 
@@ -144,10 +145,13 @@ func main() {
 	result := bip38.BruteChunk(ncpu, priv, charset, pwlen, pat, chunk, chunks, resume)
 	if result == "" {
 		fmt.Printf("\nNot found.\n")
-		return
+		os.Exit(2)
 	} else if strings.HasPrefix(result, "to resume") {
 		fmt.Printf("Exiting... %s                                               \n", result)
+		os.Exit(3)
 	} else {
 		fmt.Printf("\n!!! FOUND !!!!\n%s\n", result)
+		os.Exit(0)	
 	}
+	os.Exit(4) // not reached but added here defensively
 }
