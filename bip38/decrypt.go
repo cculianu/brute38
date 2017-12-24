@@ -25,10 +25,10 @@ type Key struct {
 	typ int // one of NonECMultKey or ECMultKey above
 	salt [] byte // the slice salt -- a slice of .dec slice
 	entropy [] byte // only non-nil for typ==ECMultKey -- a slice into .dec
-	hasLotSequence bool // always false, may be true only for typ==ECMultKey
+	hasLotSequence bool // usually false, may be true only for typ==ECMultKey
 }
 
-var bigN *big.Int
+var bigN *big.Int ///< used by Decrypt code below for ECMultKey type keys
 
 func init() {
 	var success bool
