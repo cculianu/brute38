@@ -55,15 +55,15 @@ Options:
   -h             Usage Help
   
 Examples:
-    brute38.go --resume=3 m?p 6PRM2NBu9Zg9Z5Loxma1RUQiktGDQrqLBg3X7171UDJt9bPTGDqSHWibTh
+    brute38 --resume=3 m?p 6PRM2NBu9Zg9Z5Loxma1RUQiktGDQrqLBg3X7171UDJt9bPTGDqSHWibTh
         Resumes at 3, searches a password of length 3 with the middle
         character being unknown, from the entire ASCII set.
         
-    brute38.go --chatset='mopab' 3 6PRM2NBu9Zg9Z5Loxma1RUQiktGDQrqLBg3X7171UDJt9bPTGDqSHWibTh
+    brute38 --chatset='mopab' 3 6PRM2NBu9Zg9Z5Loxma1RUQiktGDQrqLBg3X7171UDJt9bPTGDqSHWibTh
         Searches a password of length 3 with all characters being unknown,
         from a very limited set.
 
-    brute38.go --charset='12345' 'foo??bar???' 6PRSWiQDUmjYFtZ4PyVDNa9cRABDwoegJK8N96vBL4ZQSDj55ukRhYiXu9
+    brute38 --charset='12345' 'foo??bar???' 6PRSWiQDUmjYFtZ4PyVDNa9cRABDwoegJK8N96vBL4ZQSDj55ukRhYiXu9
         Searches a password of length 11, with 2 middle characters unknown and
         3 at the end unknonw, from a very small numeric set.
         Hint: the actual password above was 'foo35bar111'. 
