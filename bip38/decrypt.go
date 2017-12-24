@@ -5,11 +5,11 @@ import (
 	"golang.org/x/crypto/scrypt"
 	"crypto/aes"
 	"crypto/sha256"
-	"encoding/hex"
 	"github.com/cculianu/gocoin/btc"
 	"log"
 	"math/big"
 )
+
 
 func sha256Twice(b []byte) []byte {
 	h := sha256.New()
@@ -20,6 +20,61 @@ func sha256Twice(b []byte) []byte {
 	return h.Sum(nil)
 }
 
+func Pk2Wif(pk []byte, compressed bool) string {
+	pk = append([]byte{0x80},pk...) // prepend 0x80 for mainnet
+	if compressed {
+		pk = append(pk,0x01)
+	}
+	sha2 := sha256Twice(pk)
+	pkChk := append(pk, sha2[0:4]...)
+	return btc.Encodeb58(pkChk)
+}
+
+func DecryptWithPassphraseNoEC(dec []byte, passphrase string) string {
+	flagByte := dec[2]
+	compressed := (flagByte&0x20) == 0x20
+	if !compressed && flagByte != 0xc0 {
+		log.Fatal("Invalid BIP38 compression flag")
+	}
+	salt := dec[3:7]
+	scryptBuf, err := scrypt.Key([]byte(passphrase), salt, 16384, 8, 8, 64)
+	derivedHalf1 := scryptBuf[0:32]
+	derivedHalf2 := scryptBuf[32:64]
+	encryptedHalf1 := dec[7:23]
+	encryptedHalf2 := dec[23:39]
+	h, err := aes.NewCipher(derivedHalf2)
+	if h == nil {
+		log.Fatal(err)
+	}
+	k1 := make([] byte, 16)
+	k2 := make([] byte, 16)
+	h.Decrypt(k1, encryptedHalf1)
+	h, err = aes.NewCipher(derivedHalf2)
+	if h == nil {
+		log.Fatal(err)
+	}
+	h.Decrypt(k2, encryptedHalf2)
+	keyBytes := make([] byte, 32)
+	for i := 0; i < 16; i++ {
+		keyBytes[i] = k1[i] ^ derivedHalf1[i];
+		keyBytes[i+16] = k2[i] ^ derivedHalf1[i+16];
+	}
+	d := new (big.Int).SetBytes(keyBytes)
+	pubKey, err := btc.PublicFromPrivate(d.Bytes(), compressed)
+	if pubKey == nil {
+		log.Fatal(err)
+	}
+	addr := btc.NewAddrFromPubkey(pubKey, 0).String()
+	
+	addrHashed := sha256Twice([]byte(addr))[0:4]
+
+	if addrHashed[0] != salt[0] || addrHashed[1] != salt[1] || addrHashed[2] != salt[2] || addrHashed[3] != salt[3] {
+		return ""
+	}
+
+	return Pk2Wif(d.Bytes(),compressed)
+}
+
 func DecryptWithPassphrase(encryptedKey string, passphrase string) string {
 	dec := btc.Decodeb58(encryptedKey)[:39] // trim to length 39 (not sure why needed)
 	if dec == nil {
@@ -27,7 +82,7 @@ func DecryptWithPassphrase(encryptedKey string, passphrase string) string {
 	}
 
 	if dec[0] == 0x01 && dec[1] == 0x42 {
-		log.Fatal("TODO: implement decryption when EC multiply mode not used")
+		return DecryptWithPassphraseNoEC(dec, passphrase)
 	} else if dec[0] == 0x01 && dec[1] == 0x43 {
 		compress := dec[2]&0x20 == 0x20
 		hasLotSequence := dec[2]&0x04 == 0x04
@@ -114,7 +169,7 @@ func DecryptWithPassphrase(encryptedKey string, passphrase string) string {
 			return ""
 		}
 
-		return hex.EncodeToString(privKey.Bytes())
+		return Pk2Wif(privKey.Bytes(),compress)
 	}
 
 	log.Fatal("Malformed byte slice")
