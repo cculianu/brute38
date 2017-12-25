@@ -12,7 +12,7 @@ import (
 )
 
 var APP_NAME string = "BIP38 Bruteforce Cracker"
-var APP_USAGE string = `BIP38 Bruteforce Cracker v 1.3.2b
+var APP_USAGE string = `BIP38 Bruteforce Cracker v 1.3.2c
 Copyright (c) 2017, Calin Culianu <calin.culianu@gmail.com>
 BTC & BCH Donation Address: 1Ca1inQuedcKdyELCTmN8AtKTTehebY4mC 
 
@@ -140,7 +140,7 @@ func main() {
 	if arguments["--resume"] != nil {
 		resume, _ = strconv.ParseUint(arguments["--resume"].(string), 10, 64)
 	}
-	fmt.Printf("Running brute force for BIP0038-encrypted string on %d CPUs\n", ncpu)
+	fmt.Printf("Running brute force for BIP38-encrypted key on %d CPUs\n", ncpu)
 	runtime.GOMAXPROCS(ncpu)
 	result := bip38.BruteChunk(ncpu, priv, charset, pwlen, pat, chunk, chunks, resume)
 	if result == "" {

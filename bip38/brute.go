@@ -76,7 +76,8 @@ func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat strin
 	if charset == "" {
 		charset = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~."
 	}
-	fmt.Printf("Using character set: %s\nEncrypted key: %s\n", charset, encryptedKey)
+	
+	fmt.Printf("Using character set: %s\nEncrypted key: %s\nKeyType: %s\n", charset, encryptedKey, key.TypeString())
 
 	if len([]rune(pat)) != 0 {
 		fmt.Printf("Pattern: %s\n", pat)
@@ -88,9 +89,7 @@ func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat strin
 			pat = pat + "?"
 		}
 		fmt.Printf("Password length: %d\n", pwlen)
-	}
-	
-	fmt.Printf("KeyType: %s\n", key.TypeString())
+	}	
 	
 	patAsRunes := []rune(pat)
 	spaceSize := uint64(math.Pow(float64(len(charset)), float64(pwlen)))

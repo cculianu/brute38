@@ -55,8 +55,6 @@ func NewKey(encKey string) (o *Key) {
 	} else {
 		log.Fatal("Malformed byte slice -- the specified key appears to be invalid")		
 	}
-	// debug print
-	//log.Printf("Keytype=%d\n",o.typ)
 
 	o.flag = o.dec[2]
 	o.compressed = (o.flag&0x20) == 0x20
