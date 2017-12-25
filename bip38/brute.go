@@ -127,7 +127,7 @@ func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat strin
 		go searchRange(start, finish, key, charset, pwlen, patAsRunes, c)
 	}
 	var minResumeKey uint64 = 0
-	i := routines - 1
+	i := routines
 	for {
 		select {
 		case s := <-c:
