@@ -78,6 +78,14 @@ func NewKey(encKey string) (o *Key) {
 	return o
 }
 
+func (o *Key) TypeString() string {
+	switch o.typ {
+		case NonECMultKey: return "NonECMultKey"
+		case ECMultKey: return "ECMultKey"
+	}
+	return "UnknownKey"
+}
+
 func sha256Twice(b []byte) []byte {
 	h := sha256.New()
 	h.Write(b)

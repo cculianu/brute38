@@ -90,6 +90,8 @@ func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat strin
 		fmt.Printf("Password length: %d\n", pwlen)
 	}
 	
+	fmt.Printf("KeyType: %s\n", key.TypeString())
+	
 	patAsRunes := []rune(pat)
 	spaceSize := uint64(math.Pow(float64(len(charset)), float64(pwlen)))
 	fmt.Printf("Total keyspace size: %d\n", spaceSize)
