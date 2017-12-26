@@ -167,8 +167,10 @@ func main() {
     
     var lines []string = nil
     if infile != "" {
-        fmt.Printf("Reading file into memory: %s...\n", infile)
-        lines = readAllLines(infile, !notrim)
+        fmt.Printf("Reading password file into memory: %s...\n", infile)
+        var mem uint64
+        lines, mem = readAllLines(infile, !notrim)
+        fmt.Printf("%s memory used for password file data\n",prettyFormatMem(mem))
     }
 	
 	ncpu := runtime.NumCPU()
@@ -195,13 +197,17 @@ func main() {
 	os.Exit(4) // not reached but added here defensively
 }
 
-func readAllLines(fileName string, trim bool) []string {
-    var lines []string = make([]string,0)
+func readAllLines(fileName string, trim bool) (lines []string, memUsed uint64) {
     file, err := os.Open(fileName)
     if (err != nil) {
         log.Fatal(fmt.Sprintf("Cannot open input file, error was '%s'",err.Error()))
     }
     scanner := bufio.NewScanner(file)
+    var mem runtime.MemStats
+    runtime.GC()
+    runtime.ReadMemStats(&mem)
+    memUsed = mem.Alloc
+//    var tot uint64 = 0
 	for scanner.Scan() {
 		line := scanner.Text()
         if trim {
@@ -209,10 +215,30 @@ func readAllLines(fileName string, trim bool) []string {
         }
         if len(line) > 0 {
             lines = append(lines,line)
+//            tot += uint64(len(line))
         }
 	}
 	if err = scanner.Err(); err != nil {
 		log.Fatal("error reading input file:" + err.Error())
 	}
-    return lines
+    runtime.GC()
+    runtime.ReadMemStats(&mem)
+    memUsed = mem.Alloc - memUsed
+//    memUsed = tot
+    return
+}
+
+func prettyFormatMem(size uint64) string {
+    rem := uint64(0)
+    suffixes := []string{ "bytes", "KB", "MB", "GB", "TB"}
+    var i int
+    for i = 0; i < len(suffixes)-1 && size > 1024; i++ {
+        rem = size % 1024
+        size /= 1024
+    }
+    if rem > 0 {
+        rem = (rem*100)/1024
+        return fmt.Sprintf("%v.%v %s",size,rem,suffixes[i])        
+    }
+    return fmt.Sprintf("%v %s",size,suffixes[i])
 }
