@@ -101,6 +101,8 @@ func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat strin
 	}
 	fmt.Printf("Encrypted key: %s\nKeyType: %s\n", encryptedKey, key.TypeString())
 	
+	spaceSize := uint64(math.Pow(float64(len(charset)), float64(pwlen)))
+	
 	if passwords == nil {
 		if len([]rune(pat)) != 0 {
 			fmt.Printf("Pattern: %s\n", pat)
@@ -113,17 +115,13 @@ func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat strin
 			}
 			fmt.Printf("Password length: %d\n", pwlen)
 		}
+		fmt.Printf("Total passphrase space size: %d\n", spaceSize)
 	} else {
+		spaceSize = uint64(len(passwords))
 		fmt.Printf("Number of passphrases to try: %d\n", len(passwords))
 	}
 	
 	patAsRunes := []rune(pat)
-	spaceSize := uint64(math.Pow(float64(len(charset)), float64(pwlen)))
-	if passwords != nil {
-		spaceSize = uint64(len(passwords))
-	} else {
-		fmt.Printf("Total passphrase space size: %d\n", spaceSize)
-	}
 	startFrom := uint64(0)
 	chunkSize := spaceSize / uint64(chunks)
 	blockSize := uint64(chunkSize / uint64(routines))
@@ -133,7 +131,7 @@ func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat strin
 		if chunk == chunks-1 {
 			csz = spaceSize - startFrom
 		}
-		fmt.Printf("Chunk keyspace size: %d  Starting from point: %d\n", csz, startFrom)
+		fmt.Printf("Chunk passphrase space size: %d  Starting from point: %d\n", csz, startFrom)
 	}
 
 	totalTried = resume * uint64(routines)

@@ -199,7 +199,7 @@ func readAllLines(fileName string, trim bool) []string {
     var lines []string = make([]string,0)
     file, err := os.Open(fileName)
     if (err != nil) {
-        log.Fatal("Error opening file " + fileName + ": " + err.Error())
+        log.Fatal(fmt.Sprintf("Cannot open input file, error was '%s'",err.Error()))
     }
     scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
