@@ -13,6 +13,29 @@ import (
 var totalTried uint64 = 0
 var stopSearch int32 = 0
 
+func tryPasswords(start, finish uint64, key *Key, passwords []string, c chan string) {
+	var i uint64
+	if finish > uint64(len(passwords)) {
+		log.Fatal("INTERNAL ERROR: tryPasswords -- finish > len(passwords)!")
+	}
+	for i = start; atomic.LoadInt32(&stopSearch) == 0 && i < finish; i++ {
+		privKey := DecryptWithPassphrase(key, passwords[i])
+		if privKey != "" {
+			c <- privKey + "    pass = '" + passwords[i] + "'"
+			return
+		}
+
+		atomic.AddUint64(&totalTried, 1)
+
+		fmt.Printf("%6d passphrases tried (latest guess: %s )                       \r", atomic.LoadUint64(&totalTried), passwords[i])
+	}
+	if atomic.LoadInt32(&stopSearch) != 0 {
+		c <- fmt.Sprintf("%d", i-start) // interrupt signal received, announce our position for the resume code
+		return
+	}
+	c <- ""	
+}
+
 func searchRange(start, finish uint64, key *Key, charset string, pwlen int, pat []rune, c chan string) {
 	cset := []rune(charset)
 	var i uint64
@@ -38,7 +61,7 @@ func searchRange(start, finish uint64, key *Key, charset string, pwlen int, pat 
 
 		atomic.AddUint64(&totalTried, 1)
 
-		fmt.Printf("%6d passphrases tried (latest guess: %s )     \r", atomic.LoadUint64(&totalTried), guessString)
+		fmt.Printf("%6d passphrases tried (latest guess: %s )                      \r", atomic.LoadUint64(&totalTried), guessString)
 	}
 	if atomic.LoadInt32(&stopSearch) != 0 {
 		c <- fmt.Sprintf("%d", i-start) // interrupt signal received, announce our position for the resume code
@@ -47,11 +70,7 @@ func searchRange(start, finish uint64, key *Key, charset string, pwlen int, pat 
 	c <- ""
 }
 
-func Brute(routines int, encryptedKey, charset string, pwlen int, pat string, resume uint64) string {
-	return BruteChunk(routines, encryptedKey, charset, pwlen, pat, 0, 1, resume)
-}
-
-func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat string, chunk, chunks int, resume uint64) string {
+func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat string, passwords []string, chunk, chunks int, resume uint64) string {
 	if chunk < 0 || chunks <= 0 || chunk >= chunks {
 		log.Fatal("chunk/chunks specification invalid")
 	}
@@ -65,7 +84,7 @@ func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat strin
 		log.Fatal("routines must be >= 1")
 	}
 
-	if pwlen < 1 {
+	if pwlen < 1 && passwords == nil {
 		log.Fatal("pw length must be >= 1")
 	}
 
@@ -73,27 +92,38 @@ func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat strin
 	//charset := " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~.€.‚ƒ„…†‡ˆ‰Š‹Œ.Ž..‘’“”•–—˜™š›œ.žŸ ¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ"
 
 	// Printable ASCII
-	if charset == "" {
+	if charset == "" && passwords == nil {
 		charset = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~."
 	}
 	
-	fmt.Printf("Using character set: %s\nEncrypted key: %s\nKeyType: %s\n", charset, encryptedKey, key.TypeString())
-
-	if len([]rune(pat)) != 0 {
-		fmt.Printf("Pattern: %s\n", pat)
-		fmt.Printf("Unknown chars: %d\n", pwlen)		
-		fmt.Printf("Password length: %d\n", len([]rune(pat)))
-	} else {
-		pat = ""
-		for i := 0; i < pwlen; i++ {
-			pat = pat + "?"
+	if charset != "" {
+		fmt.Printf("Using character set: %s\n",charset)
+	}
+	fmt.Printf("Encrypted key: %s\nKeyType: %s\n", encryptedKey, key.TypeString())
+	
+	if passwords == nil {
+		if len([]rune(pat)) != 0 {
+			fmt.Printf("Pattern: %s\n", pat)
+			fmt.Printf("Unknown chars: %d\n", pwlen)		
+			fmt.Printf("Password length: %d\n", len([]rune(pat)))
+		} else {
+			pat = ""
+			for i := 0; i < pwlen; i++ {
+				pat = pat + "?"
+			}
+			fmt.Printf("Password length: %d\n", pwlen)
 		}
-		fmt.Printf("Password length: %d\n", pwlen)
-	}	
+	} else {
+		fmt.Printf("Number of passphrases to try: %d\n", len(passwords))
+	}
 	
 	patAsRunes := []rune(pat)
 	spaceSize := uint64(math.Pow(float64(len(charset)), float64(pwlen)))
-	fmt.Printf("Total keyspace size: %d\n", spaceSize)
+	if passwords != nil {
+		spaceSize = uint64(len(passwords))
+	} else {
+		fmt.Printf("Total passphrase space size: %d\n", spaceSize)
+	}
 	startFrom := uint64(0)
 	chunkSize := spaceSize / uint64(chunks)
 	blockSize := uint64(chunkSize / uint64(routines))
@@ -125,7 +155,12 @@ func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat strin
 			finish = uint64(i)*blockSize + blockSize + startFrom
 		}
 		start := uint64(i)*blockSize + startFrom + resume
-		go searchRange(start, finish, key, charset, pwlen, patAsRunes, c)
+		
+		if passwords == nil {
+			go searchRange(start, finish, key, charset, pwlen, patAsRunes, c)
+		} else {
+			go tryPasswords(start, finish, key, passwords, c)
+		}
 	}
 	var minResumeKey uint64 = 0
 	i := routines

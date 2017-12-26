@@ -9,25 +9,31 @@ import (
 	"strconv"
 	"strings"
 	"os"
+    "bufio"
 )
 
 var APP_NAME string = "BIP38 Bruteforce Cracker"
-var APP_USAGE string = `BIP38 Bruteforce Cracker v 1.3.2c
+var APP_USAGE string = `BIP38 Bruteforce Cracker v 1.4.0
 Copyright (c) 2017, Calin Culianu <calin.culianu@gmail.com>
 BTC & BCH Donation Address: 1Ca1inQuedcKdyELCTmN8AtKTTehebY4mC 
 
 Usage:
   brute38 [--chunk=N/T] [--charset=S] [-t N] [--resume=NUM]
   brute38 [--chunk=N/T] [--charset=S] [-t N] [--resume=NUM] <pwlen_or_pat> <privatekey>
+  brute38 [--chunk=N/T] [-t N] [--resume=NUM] [-s] -i <input_file> <privatekey>
    
 Default key:
   If no privkey is specified,
          6PfQoEzqbz3i2LpHibYnwAspwBwa3Nei1rU7UH9yzfutXT7tyUzV8aYAvG
   is used, with pwlen 4 (equivalent to pattern: '????').
 
-Specifying a key to crack:
+Specifying a key and a set of passwords to try:
+
   <privatekey>   Bruteforce crack the given BIP38 key.
-  <pwlen_or_pat> Length, in characters, of the original passphrase
+
+  <pwlen_or_pat> Length, in characters, of the original passphrase. Cracking
+                 will try all possible combinations of characters from charset
+                 of length pwlen.
                                         *OR*
                  A pattern, where ? represents unknown characters, eg:
                     foo??bar?     -- try things like foo12bar3, fooABbarZ,
@@ -43,16 +49,27 @@ Specifying a key to crack:
                  specifying pwlen of 4 (for users of versions 1.1 of this program
                  which *only* had a pwlen parameter, and lacked a pattern matcher).
 
+  <input_file>   Instead of specifying a pattern and a character set, simply
+                 read a list of passwords to try from input_file. The
+                 passwords should be one per line. Leading/trailing whitespace
+                 will be trimmed from the lines read, unless -s is specified.
+
 Options:
   --chunk=N/T    For running on multiple machines to search the same space,
                  break space up into T pieces and process piece N
   --charset=S    The set of characters to use. Defaults to
                    !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_abcdefghijklmnopqrstuvwxyz{|}~
                  Be sure to set this as restrictive as possible as it greatly
-                 affects runtime and search space complexity!
+                 affects runtime and search space complexity! (Not used in
+                 <input_file> mode.)
   -t N           Set maximum threads to N, defaults to number of CPUs detected
   --resume=NUM   For continuing from a previously-aborted run. Specify the
                  resume offset to continue from, as printed onscreen after a ^C
+  -i             Use input file reading mode. Next argument should be a
+                 filename to read.  See <input_file> above.
+  -s             When using <input_file> reading mode, specifies that leading
+                 and trailing whitespace should NOT be trimmed from each
+                 password that will be tried (default is to trim).
   -h             Usage Help
   
 Examples:
@@ -86,6 +103,8 @@ func main() {
 	chunks := 1
 	chunk := 0
 	charset := "" // use default
+    infile := ""
+    notrim := false
 	if arguments["--chunk"] != nil {
 		var n int
 		var err error
@@ -100,7 +119,19 @@ func main() {
 			log.Fatal("chunk parameter invalid")
 		}
 	}
+    if arguments["-i"] != nil && arguments["-i"].(bool) {
+        infile = arguments["<input_file>"].(string)
+    }
+    if arguments["-s"] != nil && arguments["-s"].(bool) {
+        if infile == "" {
+            log.Fatal("Option -s can only be used if using -i mode!")
+        }
+        notrim = true
+    }
 	if arguments["--charset"] != nil {
+        if infile != "" {
+            log.Fatal("--charset argument cannot be combined with -i!")
+        }
 		charset = arguments["--charset"].(string)
 	}
 	var priv string = "6PfQoEzqbz3i2LpHibYnwAspwBwa3Nei1rU7UH9yzfutXT7tyUzV8aYAvG" // original reddit key see post: http://www.reddit.com/r/Bitcoin/comments/1zkcya/lets_see_how_long_it_takes_to_crack_a_4_digit/
@@ -110,6 +141,9 @@ func main() {
 		priv = arguments["<privatekey>"].(string)
 	}
 	if arguments["<pwlen_or_pat>"] != nil {
+        if infile != "" {
+            log.Fatal("<pwlen_or_pat> cannot be combined with -i!")
+        }
 		var err error
 		pwlen, err = strconv.Atoi(arguments["<pwlen_or_pat>"].(string))
 		if err == nil {
@@ -129,8 +163,13 @@ func main() {
 				log.Fatal("Error parsing pattern.  Make sure it contains at least one '?' character!")
 			}
 		}
-	}		
-	//fmt.Printf("Got pattern='%s' pwlen=%d\n",pat,pwlen)
+	}
+    
+    var lines []string = nil
+    if infile != "" {
+        fmt.Printf("Reading file into memory: %s...\n", infile)
+        lines = readAllLines(infile, !notrim)
+    }
 	
 	ncpu := runtime.NumCPU()
 	if arguments["-t"] != nil {
@@ -142,7 +181,7 @@ func main() {
 	}
 	fmt.Printf("Running brute force for BIP38-encrypted key on %d CPUs\n", ncpu)
 	runtime.GOMAXPROCS(ncpu)
-	result := bip38.BruteChunk(ncpu, priv, charset, pwlen, pat, chunk, chunks, resume)
+	result := bip38.BruteChunk(ncpu, priv, charset, pwlen, pat, lines, chunk, chunks, resume)
 	if result == "" {
 		fmt.Printf("\nNot found.\n")
 		os.Exit(2)
@@ -154,4 +193,26 @@ func main() {
 		os.Exit(0)	
 	}
 	os.Exit(4) // not reached but added here defensively
+}
+
+func readAllLines(fileName string, trim bool) []string {
+    var lines []string = make([]string,0)
+    file, err := os.Open(fileName)
+    if (err != nil) {
+        log.Fatal("Error opening file " + fileName + ": " + err.Error())
+    }
+    scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+        if trim {
+            line = strings.TrimSpace(line)
+        }
+        if len(line) > 0 {
+            lines = append(lines,line)
+        }
+	}
+	if err = scanner.Err(); err != nil {
+		log.Fatal("error reading input file:" + err.Error())
+	}
+    return lines
 }
