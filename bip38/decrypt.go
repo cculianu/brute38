@@ -10,11 +10,12 @@ import (
 	"math/big"
 )
 
+type KeyType int
 
 const ( /* used for Key.type */
 	_ = iota
-	NonECMultKey = iota
-	ECMultKey = iota
+	NonECMultKey KeyType = iota
+	ECMultKey KeyType = iota
 )
 
 type Key struct { 
@@ -22,7 +23,7 @@ type Key struct {
 	dec []byte // key decoded to bytes
 	flag byte // the flag byte
 	compressed bool // boolean flag determining if compressed
-	typ int // one of NonECMultKey or ECMultKey above
+	typ KeyType // one of NonECMultKey or ECMultKey above
 	salt [] byte // the slice salt -- a slice of .dec slice
 	entropy [] byte // only non-nil for typ==ECMultKey -- a slice into .dec
 	hasLotSequence bool // usually false, may be true only for typ==ECMultKey
