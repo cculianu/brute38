@@ -13,14 +13,14 @@ import (
 )
 
 var APP_NAME string = "BIP38 Bruteforce Cracker"
-var APP_USAGE string = `BIP38 Bruteforce Cracker v 1.4.0
-Copyright (c) 2017, Calin Culianu <calin.culianu@gmail.com>
+var APP_USAGE string = `BIP38 Bruteforce Cracker v 1.4.1
+Copyright (c) 2018, Calin Culianu <calin.culianu@gmail.com>
 BTC & BCH Donation Address: 1Ca1inQuedcKdyELCTmN8AtKTTehebY4mC 
 
 Usage:
-  brute38 [--chunk=N/T] [--charset=S] [-t N] [--resume=NUM]
-  brute38 [--chunk=N/T] [--charset=S] [-t N] [--resume=NUM] <pwlen_or_pat> <privatekey>
-  brute38 [--chunk=N/T] [-t N] [--resume=NUM] [-s] -i <input_file> <privatekey>
+  brute38 [--chunk=N/T] [--charset=S] [--coin=C] [-t N] [--resume=NUM]
+  brute38 [--chunk=N/T] [--charset=S] [--coin=C] [-t N] [--resume=NUM] <pwlen_or_pat> <privatekey>
+  brute38 [--chunk=N/T] [--coin=C] [-t N] [--resume=NUM] [-s] -i <input_file> <privatekey>
    
 Default key:
   If no privkey is specified,
@@ -55,6 +55,9 @@ Specifying a key and a set of passwords to try:
                  will be trimmed from the lines read, unless -s is specified.
 
 Options:
+  --coin=C       Specify which network the original address was for. Currently
+                 only 'btc' and 'onion' are supported for this parameter.
+                 Defaults to: btc
   --chunk=N/T    For running on multiple machines to search the same space,
                  break space up into T pieces and process piece N
   --charset=S    The set of characters to use. Defaults to
@@ -119,6 +122,17 @@ func main() {
 			log.Fatal("chunk parameter invalid")
 		}
 	}
+    if arguments["--coin"] != nil {
+        switch (strings.ToLower(arguments["--coin"].(string))) {
+            case "btc":
+                bip38.NetworkVersion[0] = 0x0
+                bip38.NetworkVersion[1] = 0x80
+            case "onion":
+                bip38.NetworkVersion[0] = 0x1f
+                bip38.NetworkVersion[1] = 0x9f
+            default: log.Fatal("Unknown coin: " + arguments["--coin"].(string) + ".  Supported coins are: btc, onion")
+        }
+    }
     if arguments["-i"] != nil && arguments["-i"].(bool) {
         infile = arguments["<input_file>"].(string)
     }

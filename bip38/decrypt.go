@@ -10,6 +10,8 @@ import (
 	"math/big"
 )
 
+var NetworkVersion [] byte = []byte{ 0x0, 0x80 } // set this to 0x1f,0x9f for DeepOnion, etc
+
 type KeyType int
 
 const ( /* used for Key.type */
@@ -100,7 +102,7 @@ func sha256Twice(b []byte) []byte {
 }
 
 func Pk2Wif(pk []byte, compressed bool) string {
-	pk = append([]byte{0x80},pk...) // prepend 0x80 for mainnet
+	pk = append([]byte{NetworkVersion[1]},pk...) // prepend 0x80 for mainnet on BTC, 0x9f for ONION, etc
 	if compressed {
 		pk = append(pk,0x01)
 	}
@@ -137,8 +139,8 @@ func DecryptWithPassphraseNoEC(key *Key, passphrase string) string {
 	if pubKey == nil {
 		log.Fatal(err)
 	}
-	addr := btc.NewAddrFromPubkey(pubKey, 0).String()
-	
+	addr := btc.NewAddrFromPubkey(pubKey, NetworkVersion[0]).String()
+		
 	addrHashed := sha256Twice([]byte(addr))[0:4]
 
 	if addrHashed[0] != key.salt[0] || addrHashed[1] != key.salt[1] || addrHashed[2] != key.salt[2] || addrHashed[3] != key.salt[3] {
@@ -213,8 +215,8 @@ func DecryptWithPassphrase(key *Key, passphrase string) string {
 			log.Fatal(err)
 		}
 
-		addr := btc.NewAddrFromPubkey(pubKey, 0).String()
-
+		addr := btc.NewAddrFromPubkey(pubKey, NetworkVersion[0]).String()
+	
 		addrHashed := sha256Twice([]byte(addr))
 
 		if addrHashed[0] != key.dec[3] || addrHashed[1] != key.dec[4] || addrHashed[2] != key.dec[5] || addrHashed[3] != key.dec[6] {
