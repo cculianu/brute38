@@ -58,14 +58,19 @@ func NewKey(encKey string) (o *Key) {
 	}
 
 	o.flag = o.dec[2]
-	o.compressed = (o.flag&0x20) == 0x20
+	o.compressed = false
 	if o.typ == NonECMultKey {
+		o.compressed = o.flag == 0xe0
 		o.salt = o.dec[3:7]
 		if !o.compressed && o.flag != 0xc0 {
 			log.Fatal("Invalid BIP38 compression flag")
 		}
 	} else if o.typ == ECMultKey {
-		o.hasLotSequence = (o.flag&0x04) == 0x04
+		o.compressed = (o.flag&0x20) != 0
+		o.hasLotSequence = (o.flag&0x04) != 0
+		if (o.flag & 0x24) != o.flag {
+			log.Fatal("Invalid BIP38 ECMultKey flag")
+		}
 		if o.hasLotSequence {
 			o.salt = o.dec[7:11]
 			o.entropy = o.dec[7:15]
