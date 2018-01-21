@@ -27,7 +27,10 @@ type Key struct {
 	salt [] byte // the slice salt -- a slice of .dec slice
 	entropy [] byte // only non-nil for typ==ECMultKey -- a slice into .dec
 	hasLotSequence bool // usually false, may be true only for typ==ECMultKey
-	networkVersion [2]byte // usually 0x0,0x80 for BTC, but may be 0x1f,0x9f for ONION, etc
+	
+	// coin / network specific info affecting key decription and address decoding:
+	networkVersion byte // usually 0x0 for BTC, but may be 0x1f for ONION, etc
+	privateKeyPrefix byte // usually 0x80 for BTC, may be 0x9f for ONION, etc
 }
 
 var bigN *big.Int ///< used by Decrypt code below for ECMultKey type keys
@@ -44,7 +47,7 @@ func NewKey(encKey string) (o *Key) {
 	o = new(Key)
 	o.enc = encKey;
 	o.dec = btc.Decodeb58(o.enc)[:39] // trim to length 39 (not sure why needed)
-	o.networkVersion = [2]byte{0x0,0x80}
+	o.networkVersion, o.privateKeyPrefix = 0x0, 0x80
 	if o.dec == nil {
 		log.Fatal("Cannot decode base58 string " + encKey)
 	}
@@ -101,8 +104,8 @@ func sha256Twice(b []byte) []byte {
 	return h.Sum(nil)
 }
 
-func Pk2Wif(pk []byte, compressed bool, networkVersion [2]byte) string {
-	pk = append([]byte{networkVersion[1]},pk...) // prepend 0x80 for mainnet on BTC, 0x9f for ONION, etc
+func Pk2Wif(pk []byte, compressed bool, privateKeyPrefix byte) string {
+	pk = append([]byte{privateKeyPrefix},pk...) // prepend 0x80 for mainnet on BTC, 0x9f for ONION, etc
 	if compressed {
 		pk = append(pk,0x01)
 	}
@@ -139,7 +142,7 @@ func DecryptWithPassphraseNoEC(key *Key, passphrase string) string {
 	if pubKey == nil {
 		log.Fatal(err)
 	}
-	addr := btc.NewAddrFromPubkey(pubKey, key.networkVersion[0]).String()
+	addr := btc.NewAddrFromPubkey(pubKey, key.networkVersion).String()
 		
 	addrHashed := sha256Twice([]byte(addr))[0:4]
 
@@ -147,7 +150,7 @@ func DecryptWithPassphraseNoEC(key *Key, passphrase string) string {
 		return ""
 	}
 
-	return Pk2Wif(d.Bytes(),key.compressed, key.networkVersion)
+	return Pk2Wif(d.Bytes(),key.compressed, key.privateKeyPrefix)
 }
 
 func DecryptWithPassphrase(key *Key, passphrase string) string {
@@ -215,7 +218,7 @@ func DecryptWithPassphrase(key *Key, passphrase string) string {
 			log.Fatal(err)
 		}
 
-		addr := btc.NewAddrFromPubkey(pubKey, key.networkVersion[0]).String()
+		addr := btc.NewAddrFromPubkey(pubKey, key.networkVersion).String()
 	
 		addrHashed := sha256Twice([]byte(addr))
 
@@ -223,7 +226,7 @@ func DecryptWithPassphrase(key *Key, passphrase string) string {
 			return ""
 		}
 
-		return Pk2Wif(privKey.Bytes(),key.compressed, key.networkVersion)
+		return Pk2Wif(privKey.Bytes(),key.compressed, key.privateKeyPrefix)
 	}
 
 	log.Fatal("INTERNAL ERROR: Unknown key type")

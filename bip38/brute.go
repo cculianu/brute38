@@ -70,7 +70,7 @@ func searchRange(start, finish uint64, key *Key, charset string, pwlen int, pat 
 	c <- ""
 }
 
-func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat string, passwords []string, chunk, chunks int, resume uint64, networkVersion [2]byte) string {
+func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat string, passwords []string, chunk, chunks int, resume uint64, coinInfo [2]byte, coinName string) string {
 	if chunk < 0 || chunks <= 0 || chunk >= chunks {
 		log.Fatal("chunk/chunks specification invalid")
 	}
@@ -80,7 +80,8 @@ func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat strin
 	
 	key := NewKey(encryptedKey)
 
-	key.networkVersion = networkVersion
+	key.networkVersion = coinInfo[0]
+	key.privateKeyPrefix = coinInfo[1]
 	
 	if routines < 1 {
 		log.Fatal("routines must be >= 1")
@@ -101,7 +102,7 @@ func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat strin
 	if charset != "" {
 		fmt.Printf("Using character set: %s\n",charset)
 	}
-	fmt.Printf("Encrypted key: %s\nKeyType: %s\n", encryptedKey, key.TypeString())
+	fmt.Printf("Encrypted key: %s\nKeyType: %s\nNetwork: %s\n", encryptedKey, key.TypeString(), coinName)
 	
 	spaceSize := uint64(math.Pow(float64(len(charset)), float64(pwlen)))
 	
