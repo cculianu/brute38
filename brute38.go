@@ -1,14 +1,14 @@
 package main
 
 import (
-	"fmt"
-	"github.com/cculianu/brute38/bip38"
-	"github.com/docopt/docopt.go"
-	"log"
-	"runtime"
-	"strconv"
-	"strings"
-	"os"
+    "fmt"
+    "github.com/cculianu/brute38/bip38"
+    "github.com/docopt/docopt.go"
+    "log"
+    "runtime"
+    "strconv"
+    "strings"
+    "os"
     "bufio"
     "sort"
 )
@@ -96,36 +96,36 @@ Examples:
 var arguments map[string]interface{}
 
 func init() {
-	var err error
+    var err error
 
-	arguments, err = docopt.Parse(APP_USAGE, nil, true, APP_NAME, false)
-	if err != nil {
-		log.Fatal(err)
-	}
+    arguments, err = docopt.Parse(APP_USAGE, nil, true, APP_NAME, false)
+    if err != nil {
+        log.Fatal(err)
+    }
 }
 
 func main() {
-	chunks := 1
-	chunk := 0
-	charset := "" // use default
+    chunks := 1
+    chunk := 0
+    charset := "" // use default
     infile := ""
     notrim := false
     coin := supportedCoins[defaultCoin] // default is BTC
     
-	if arguments["--chunk"] != nil {
-		var n int
-		var err error
-		n, err = fmt.Sscanf(arguments["--chunk"].(string), "%d/%d", &chunk, &chunks)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if n != 2 {
-			log.Fatal("Parse error for --chunk argument")
-		}
-		if chunk >= chunks || chunk < 0 || chunks <= 0 {
-			log.Fatal("chunk parameter invalid")
-		}
-	}
+    if arguments["--chunk"] != nil {
+        var n int
+        var err error
+        n, err = fmt.Sscanf(arguments["--chunk"].(string), "%d/%d", &chunk, &chunks)
+        if err != nil {
+            log.Fatal(err)
+        }
+        if n != 2 {
+            log.Fatal("Parse error for --chunk argument")
+        }
+        if chunk >= chunks || chunk < 0 || chunks <= 0 {
+            log.Fatal("chunk parameter invalid")
+        }
+    }
     if arguments["--coin"] != nil {
         carg := strings.ToLower(arguments["--coin"].(string))
         var ok bool
@@ -159,42 +159,42 @@ func main() {
         }
         notrim = true
     }
-	if arguments["--charset"] != nil {
+    if arguments["--charset"] != nil {
         if infile != "" {
             log.Fatal("--charset argument cannot be combined with -i!")
         }
-		charset = arguments["--charset"].(string)
-	}
-	var priv string = "6PfQoEzqbz3i2LpHibYnwAspwBwa3Nei1rU7UH9yzfutXT7tyUzV8aYAvG" // original reddit key see post: http://www.reddit.com/r/Bitcoin/comments/1zkcya/lets_see_how_long_it_takes_to_crack_a_4_digit/
-	var pwlen int = 4
-	var pat string = ""
-	if arguments["<privatekey>"] != nil {
-		priv = arguments["<privatekey>"].(string)
-	}
-	if arguments["<pwlen_or_pat>"] != nil {
+        charset = arguments["--charset"].(string)
+    }
+    var priv string = "6PfQoEzqbz3i2LpHibYnwAspwBwa3Nei1rU7UH9yzfutXT7tyUzV8aYAvG" // original reddit key see post: http://www.reddit.com/r/Bitcoin/comments/1zkcya/lets_see_how_long_it_takes_to_crack_a_4_digit/
+    var pwlen int = 4
+    var pat string = ""
+    if arguments["<privatekey>"] != nil {
+        priv = arguments["<privatekey>"].(string)
+    }
+    if arguments["<pwlen_or_pat>"] != nil {
         if infile != "" {
             log.Fatal("<pwlen_or_pat> cannot be combined with -i!")
         }
-		var err error
-		pwlen, err = strconv.Atoi(arguments["<pwlen_or_pat>"].(string))
-		if err == nil {
-			// used old 'pwlen' syntax, so make pattern be a string full of '?'
-			if pwlen < 1 {
-				log.Fatal("pwlen must be greater than or requal to 1!")
-			}
-		} else {
-			// uses new 'pattern' syntax
-			pat = arguments["<pwlen_or_pat>"].(string)
-			pwlen = 0
-			runes := []rune(pat)
-			for i := 0; i < len(runes); i++ {
-				if runes[i] == '?' { pwlen++ }
-			}
-			if pwlen < 1 || len(runes) < 1 {
-				log.Fatal("Error parsing pattern.  Make sure it contains at least one '?' character!")
-			}
-		}
-	}
+        var err error
+        pwlen, err = strconv.Atoi(arguments["<pwlen_or_pat>"].(string))
+        if err == nil {
+            // used old 'pwlen' syntax, so make pattern be a string full of '?'
+            if pwlen < 1 {
+                log.Fatal("pwlen must be greater than or requal to 1!")
+            }
+        } else {
+            // uses new 'pattern' syntax
+            pat = arguments["<pwlen_or_pat>"].(string)
+            pwlen = 0
+            runes := []rune(pat)
+            for i := 0; i < len(runes); i++ {
+                if runes[i] == '?' { pwlen++ }
+            }
+            if pwlen < 1 || len(runes) < 1 {
+                log.Fatal("Error parsing pattern.  Make sure it contains at least one '?' character!")
+            }
+        }
+    }
     
     var lines []string = nil
     if infile != "" {
@@ -203,29 +203,29 @@ func main() {
         lines, mem = readAllLines(infile, !notrim)
         fmt.Printf("%s memory used for password file data\n",prettyFormatMem(mem))
     }
-	
-	ncpu := runtime.NumCPU()
-	if arguments["-t"] != nil {
-		ncpu, _ = strconv.Atoi(arguments["-t"].(string))
-	}
-	var resume uint64 = 0
-	if arguments["--resume"] != nil {
-		resume, _ = strconv.ParseUint(arguments["--resume"].(string), 10, 64)
-	}
-	fmt.Printf("Running brute force for BIP38-encrypted key on %d CPUs\n", ncpu)
-	runtime.GOMAXPROCS(ncpu)
-	result := bip38.BruteChunk(ncpu, priv, charset, pwlen, pat, lines, chunk, chunks, resume, [2]byte{coin.networkVersion, coin.privateKeyPrefix}, coin.name)
-	if result == "" {
-		fmt.Printf("\nNot found.\n")
-		os.Exit(2)
-	} else if strings.HasPrefix(result, "to resume") {
-		fmt.Printf("Exiting... %s                                               \n", result)
-		os.Exit(3)
-	} else {
-		fmt.Printf("\n!!! FOUND !!!!\n%s\n", result)
-		os.Exit(0)	
-	}
-	os.Exit(4) // not reached but added here defensively
+    
+    ncpu := runtime.NumCPU()
+    if arguments["-t"] != nil {
+        ncpu, _ = strconv.Atoi(arguments["-t"].(string))
+    }
+    var resume uint64 = 0
+    if arguments["--resume"] != nil {
+        resume, _ = strconv.ParseUint(arguments["--resume"].(string), 10, 64)
+    }
+    fmt.Printf("Running brute force for BIP38-encrypted key on %d CPUs\n", ncpu)
+    runtime.GOMAXPROCS(ncpu)
+    result := bip38.BruteChunk(ncpu, priv, charset, pwlen, pat, lines, chunk, chunks, resume, [2]byte{coin.networkVersion, coin.privateKeyPrefix}, coin.name)
+    if result == "" {
+        fmt.Printf("\nNot found.\n")
+        os.Exit(2)
+    } else if strings.HasPrefix(result, "to resume") {
+        fmt.Printf("Exiting... %s                                               \n", result)
+        os.Exit(3)
+    } else {
+        fmt.Printf("\n!!! FOUND !!!!\n%s\n", result)
+        os.Exit(0)    
+    }
+    os.Exit(4) // not reached but added here defensively
 }
 
 func readAllLines(fileName string, trim bool) (lines []string, memUsed uint64) {
@@ -239,8 +239,8 @@ func readAllLines(fileName string, trim bool) (lines []string, memUsed uint64) {
     runtime.ReadMemStats(&mem)
     memUsed = mem.Alloc
 //    var tot uint64 = 0
-	for scanner.Scan() {
-		line := scanner.Text()
+    for scanner.Scan() {
+        line := scanner.Text()
         if trim {
             line = strings.TrimSpace(line)
         }
@@ -248,10 +248,10 @@ func readAllLines(fileName string, trim bool) (lines []string, memUsed uint64) {
             lines = append(lines,line)
 //            tot += uint64(len(line))
         }
-	}
-	if err = scanner.Err(); err != nil {
-		log.Fatal("error reading input file:" + err.Error())
-	}
+    }
+    if err = scanner.Err(); err != nil {
+        log.Fatal("error reading input file:" + err.Error())
+    }
     runtime.GC()
     runtime.ReadMemStats(&mem)
     memUsed = mem.Alloc - memUsed
