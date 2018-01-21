@@ -10,7 +10,7 @@ and expanded with more command-line options and better support for variable-leng
 
 See Charlie Hothersall-Thomas' original implementation at: https://github.com/chigley/bip38
 
-Includes support for Bitcoin addresses, plus MANY other coins (run it with --coin=list option to see the list).
+Includes support for Bitcoin addresses, plus MANY other coins (run it with the --coin=list option to see the full list of supported coin addresses).
 
 Requires:
 
@@ -18,14 +18,18 @@ Requires:
 
 Installation/Compilation:
 
-> go get
+> go get github.com/cculianu/brute38
 
-> go build
+> go build github.com/cculianu/brute38
+
+> go install github.com/cculianu/brute38
 
 Running:
 
-> ./brute38 -h 
+> $GOPATH/bin/brute38 -h 
 
-This program takes a variety of command-line options.  See the help (-h).
+(Windows)
 
-All of the above assumes you have Go set up properly and you copied the code into your GOPATH/src somewhere.
+> %GOPATH%/bin/brute38.exe -h
+
+All of the above assumes you have Go set up properly.
