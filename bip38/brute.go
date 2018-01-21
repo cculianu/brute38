@@ -70,7 +70,7 @@ func searchRange(start, finish uint64, key *Key, charset string, pwlen int, pat 
 	c <- ""
 }
 
-func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat string, passwords []string, chunk, chunks int, resume uint64) string {
+func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat string, passwords []string, chunk, chunks int, resume uint64, networkVersion [2]byte) string {
 	if chunk < 0 || chunks <= 0 || chunk >= chunks {
 		log.Fatal("chunk/chunks specification invalid")
 	}
@@ -80,6 +80,8 @@ func BruteChunk(routines int, encryptedKey, charset string, pwlen int, pat strin
 	
 	key := NewKey(encryptedKey)
 
+	key.networkVersion = networkVersion
+	
 	if routines < 1 {
 		log.Fatal("routines must be >= 1")
 	}

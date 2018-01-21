@@ -13,7 +13,7 @@ import (
 )
 
 var APP_NAME string = "BIP38 Bruteforce Cracker"
-var APP_USAGE string = `BIP38 Bruteforce Cracker v 1.4.1
+var APP_USAGE string = `BIP38 Bruteforce Cracker v 1.4.2
 Copyright (c) 2018, Calin Culianu <calin.culianu@gmail.com>
 BTC & BCH Donation Address: 1Ca1inQuedcKdyELCTmN8AtKTTehebY4mC 
 
@@ -108,6 +108,7 @@ func main() {
 	charset := "" // use default
     infile := ""
     notrim := false
+    networkVersion := [2]byte{0x0,0x80} // BTC
 	if arguments["--chunk"] != nil {
 		var n int
 		var err error
@@ -125,13 +126,15 @@ func main() {
     if arguments["--coin"] != nil {
         switch (strings.ToLower(arguments["--coin"].(string))) {
             case "btc":
-                bip38.NetworkVersion[0] = 0x0
-                bip38.NetworkVersion[1] = 0x80
+                networkVersion[0] = 0x0
+                networkVersion[1] = 0x80
             case "onion":
-                bip38.NetworkVersion[0] = 0x1f
-                bip38.NetworkVersion[1] = 0x9f
+                networkVersion[0] = 0x1f
+                networkVersion[1] = 0x9f
             default: log.Fatal("Unknown coin: " + arguments["--coin"].(string) + ".  Supported coins are: btc, onion")
         }
+    } else {
+        
     }
     if arguments["-i"] != nil && arguments["-i"].(bool) {
         infile = arguments["<input_file>"].(string)
@@ -197,7 +200,7 @@ func main() {
 	}
 	fmt.Printf("Running brute force for BIP38-encrypted key on %d CPUs\n", ncpu)
 	runtime.GOMAXPROCS(ncpu)
-	result := bip38.BruteChunk(ncpu, priv, charset, pwlen, pat, lines, chunk, chunks, resume)
+	result := bip38.BruteChunk(ncpu, priv, charset, pwlen, pat, lines, chunk, chunks, resume, networkVersion)
 	if result == "" {
 		fmt.Printf("\nNot found.\n")
 		os.Exit(2)
