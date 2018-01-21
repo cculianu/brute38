@@ -1,7 +1,7 @@
 brute38
 =======
 
-(C) 2017 Calin Culianu <calin.culianu@gmail.com> BCH/BTC: 1Ca1inQuedcKdyELCTmN8AtKTTehebY4mC
+(C) 2018 Calin Culianu <calin.culianu@gmail.com> BCH/BTC: 1Ca1inQuedcKdyELCTmN8AtKTTehebY4mC
 
 BIP38 brute force password cracker, written in Go
 
@@ -9,6 +9,8 @@ Based on Charlie Hothersall-Thomas' implementation, but added features, bugs fix
 and expanded with more command-line options and better support for variable-length passwords. 
 
 See Charlie Hothersall-Thomas' original implementation at: https://github.com/chigley/bip38
+
+Includes support for Bitcoin addresses, plus MANY other coins (run it with --coin=list option to see the list).
 
 Requires:
 
@@ -22,6 +24,8 @@ Installation/Compilation:
 
 Running:
 
-> ./brute38
+> ./brute38 -h 
 
-The above assumes you have Go set up properly and you copied the code into your GOPATH/src somewhere.
+This program takes a variety of command-line options.  See the help (-h).
+
+All of the above assumes you have Go set up properly and you copied the code into your GOPATH/src somewhere.
