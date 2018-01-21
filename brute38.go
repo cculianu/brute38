@@ -14,7 +14,7 @@ import (
 )
 
 var APP_NAME string = "BIP38 Bruteforce Cracker"
-var APP_USAGE string = `BIP38 Bruteforce Cracker v 1.4.3
+var APP_USAGE string = `BIP38 Bruteforce Cracker v 1.4.4
 Copyright (c) 2018, Calin Culianu <calin.culianu@gmail.com>
 BTC & BCH Donation Address: 1Ca1inQuedcKdyELCTmN8AtKTTehebY4mC 
 

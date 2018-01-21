@@ -114,7 +114,7 @@ func Pk2Wif(pk []byte, compressed bool, privateKeyPrefix byte) string {
     return btc.Encodeb58(pkChk)
 }
 
-func DecryptWithPassphraseNoEC(key *Key, passphrase string) string {
+func DecryptWithPassphraseNoEC(key *Key, passphrase string) (wifPrivKey, addr string ) {
     scryptBuf, err := scrypt.Key([]byte(passphrase), key.salt, 16384, 8, 8, 64)
     derivedHalf1 := scryptBuf[0:32]
     derivedHalf2 := scryptBuf[32:64]
@@ -142,18 +142,20 @@ func DecryptWithPassphraseNoEC(key *Key, passphrase string) string {
     if pubKey == nil {
         log.Fatal(err)
     }
-    addr := btc.NewAddrFromPubkey(pubKey, key.networkVersion).String()
+    addr = btc.NewAddrFromPubkey(pubKey, key.networkVersion).String()
         
     addrHashed := sha256Twice([]byte(addr))[0:4]
 
     if addrHashed[0] != key.salt[0] || addrHashed[1] != key.salt[1] || addrHashed[2] != key.salt[2] || addrHashed[3] != key.salt[3] {
-        return ""
+        wifPrivKey, addr = "", ""
+        return
     }
-
-    return Pk2Wif(d.Bytes(),key.compressed, key.privateKeyPrefix)
+    
+    wifPrivKey = Pk2Wif(d.Bytes(),key.compressed, key.privateKeyPrefix)
+    return
 }
 
-func DecryptWithPassphrase(key *Key, passphrase string) string {
+func DecryptWithPassphrase(key *Key, passphrase string) (wifPrivKey, addr string) {
     if key.typ == NonECMultKey {
         return DecryptWithPassphraseNoEC(key, passphrase)
     } else if key.typ == ECMultKey {
@@ -218,17 +220,19 @@ func DecryptWithPassphrase(key *Key, passphrase string) string {
             log.Fatal(err)
         }
 
-        addr := btc.NewAddrFromPubkey(pubKey, key.networkVersion).String()
+        addr = btc.NewAddrFromPubkey(pubKey, key.networkVersion).String()
     
         addrHashed := sha256Twice([]byte(addr))
 
         if addrHashed[0] != key.dec[3] || addrHashed[1] != key.dec[4] || addrHashed[2] != key.dec[5] || addrHashed[3] != key.dec[6] {
-            return ""
+            wifPrivKey, addr = "", ""
+            return
         }
 
-        return Pk2Wif(privKey.Bytes(),key.compressed, key.privateKeyPrefix)
+        wifPrivKey = Pk2Wif(privKey.Bytes(),key.compressed, key.privateKeyPrefix)
+        return
     }
 
     log.Fatal("INTERNAL ERROR: Unknown key type")
-    return ""
+    return "",""
 }

@@ -19,9 +19,9 @@ func tryPasswords(start, finish uint64, key *Key, passwords []string, c chan str
         log.Fatal("INTERNAL ERROR: tryPasswords -- finish > len(passwords)!")
     }
     for i = start; atomic.LoadInt32(&stopSearch) == 0 && i < finish; i++ {
-        privKey := DecryptWithPassphrase(key, passwords[i])
+        privKey, addr := DecryptWithPassphrase(key, passwords[i])
         if privKey != "" {
-            c <- privKey + "    pass = '" + passwords[i] + "'"
+            c <- privKey + "    pass = '" + passwords[i] + "'   ( Address: " + addr + " )"
             return
         }
 
@@ -46,16 +46,16 @@ func searchRange(start, finish uint64, key *Key, charset string, pwlen int, pat 
         acum := i
         for j := 0; j < len(pat); j++ {
             if pat[j] == '?' {
-                guess[j] = cset[acum%uint64(len(cset))]    
+                guess[j] = cset[acum%uint64(len(cset))]
                 acum /= uint64(len(cset))
             } else {
-                guess[j] = pat[j]                
+                guess[j] = pat[j]   
             }
         }
         guessString := string(guess)
-        privKey := DecryptWithPassphrase(key, guessString)
+        privKey, addr := DecryptWithPassphrase(key, guessString)
         if privKey != "" {
-            c <- privKey + "    pass = '" + guessString + "'"
+            c <- privKey + "    pass = '" + guessString + "'   ( Address: " + addr + " )"
             return
         }
 
