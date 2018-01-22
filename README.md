@@ -10,7 +10,11 @@ and expanded with more command-line options and better support for variable-leng
 
 See Charlie Hothersall-Thomas' original implementation at: https://github.com/chigley/bip38
 
-Includes support for Bitcoin addresses, plus MANY other coins (run it with the --coin=list option to see the full list of supported coin addresses).
+Distinguishing Features:
+
+- Support for Bitcoin, Bitcoin Cash plus over 170+ other different address styles. Run it with the --coin=list option to see the full list of supported coins/addresses.
+- Design philosophy is for a *resumable* brute force cracker. This way you can start and stop it and let cracking sessions run for weeks at a time. Given the same input parameters (password length, thread count, pattern, key, etc), you can hit CTRL-C at any time, get a magic number, and then re-run the app with the --resume=N parameter.
+
 
 Requires:
 
