@@ -14,7 +14,7 @@ import (
 )
 
 var APP_NAME string = "BIP38 Bruteforce Cracker"
-var APP_USAGE string = `BIP38 Bruteforce Cracker v 1.4.4
+var APP_USAGE string = `BIP38 Bruteforce Cracker v 1.4.5
 Copyright (c) 2018, Calin Culianu <calin.culianu@gmail.com>
 BTC & BCH Donation Address: 1Ca1inQuedcKdyELCTmN8AtKTTehebY4mC 
 
@@ -291,6 +291,7 @@ var supportedCoins = map[string]Coin{
     "dogd"  : {name: "Doge Coin Dark",    ticker: "doged",       networkVersion: 0x1e, privateKeyPrefix: 0x9e},
     "ltc"   : {name: "Litecoin",          ticker: "ltc",         networkVersion: 0x30, privateKeyPrefix: 0xb0},
     "vtc"   : {name: "VertCoin",          ticker: "vtc",         networkVersion: 0x47, privateKeyPrefix: 0x80},
+    "cdy"   : {name: "Bitcoin Candy",     ticker: "cdy",         networkVersion: 0x1c, privateKeyPrefix: 0x80},
     
     // below are a bunch of coins taken from the javascript at walletgenerator.net.  not tested.. but should work
     "2give" : {name: "2GIVE", ticker: "2give", networkVersion: 0x27, privateKeyPrefix:  0xa7},
